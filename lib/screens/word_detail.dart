@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:word_pad/data/dbHelper.dart';
 import 'package:word_pad/models/word.dart';
+import 'package:word_pad/screens/toast_message.dart';
 
 class WordDetail extends StatefulWidget {
   Word word;
@@ -148,5 +149,6 @@ class _WordDetailState extends State {
         description: txtDescription.text,
         isLearn: word.isLearn));
     Navigator.pop(context, true);
+    ToastMessage("Updated");
   }
 }

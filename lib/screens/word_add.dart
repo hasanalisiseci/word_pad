@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:word_pad/data/dbHelper.dart';
 import 'package:word_pad/models/word.dart';
+import 'package:word_pad/screens/toast_message.dart';
 
 class WordAdd extends StatefulWidget {
   @override
@@ -170,6 +171,7 @@ class WordAddState extends State {
         description: txtDescription.text,
         isLearn: isLearn));
     Navigator.pop(context, true);
+    ToastMessage("New word added to list");
   }
 
   void getWords() async {

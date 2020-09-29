@@ -3,19 +3,19 @@ import 'package:word_pad/data/dbHelper.dart';
 import 'package:word_pad/models/word.dart';
 import 'package:word_pad/screens/side_bar.dart';
 import 'package:word_pad/screens/toast_message.dart';
-import 'package:word_pad/screens/word_add.dart';
 import 'package:word_pad/screens/word_detail.dart';
 
-class WordsList extends StatefulWidget {
+class LearnedWordsList extends StatefulWidget {
   @override
   State<StatefulWidget> createState() {
-    return _WordsListState();
+    return _LearnedWordsListState();
   }
 }
 
-class _WordsListState extends State {
+class _LearnedWordsListState extends State {
   var dbHelper = DbHelper();
   List<Word> words;
+  List<Word> learnedWords = new List<Word>();
   int wordCount = 0;
 
   @override
@@ -31,14 +31,6 @@ class _WordsListState extends State {
       drawer: NavDrawer(),
       appBar: buildAppBar(),
       body: buildWordList(),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.deepOrange,
-        onPressed: () {
-          goToWordAdd();
-        },
-        child: Icon(Icons.add),
-        tooltip: "Add Word to Pad",
-      ),
     );
   }
 
@@ -50,7 +42,7 @@ class _WordsListState extends State {
             padding: const EdgeInsets.only(top: 20, left: 10, right: 10),
             child: GestureDetector(
               onTap: () {
-                showDetail(context, words[position]);
+                showDetail(context, learnedWords[position]);
               },
               child: Container(
                 decoration: BoxDecoration(
@@ -76,7 +68,7 @@ class _WordsListState extends State {
                             child: Container(
                               width: 200,
                               child: Text(
-                                this.words[position].word,
+                                this.learnedWords[position].word,
                                 style: TextStyle(
                                     color: Colors.grey.shade800,
                                     fontSize: 30,
@@ -86,34 +78,8 @@ class _WordsListState extends State {
                             ),
                           ),
                           Padding(
-                              padding: const EdgeInsets.only(right: 20.0),
-                              child: GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    if (this.words[position].isLearn == 1) {
-                                      this.words[position].isLearn = 0;
-                                      updateWord(this.words[position]);
-
-                                      ToastMessage(
-                                          "It was removed from\nwhat was learned.");
-                                    } else if (this.words[position].isLearn ==
-                                        0) {
-                                      this.words[position].isLearn = 1;
-                                      updateWord(this.words[position]);
-
-                                      ToastMessage(
-                                          "Added to what has\nbeen learned.");
-                                    }
-                                  });
-                                },
-                                child: Icon(
-                                  Icons.bookmark,
-                                  size: 40,
-                                  color: this.words[position].isLearn == 1
-                                      ? Colors.deepOrange
-                                      : Colors.grey,
-                                ),
-                              ))
+                            padding: const EdgeInsets.only(right: 20.0),
+                          ),
                         ],
                       ),
                       SizedBox(height: 5),
@@ -123,7 +89,7 @@ class _WordsListState extends State {
                           height: 50,
                           width: 295,
                           child: SingleChildScrollView(
-                            child: Text(this.words[position].description,
+                            child: Text(this.learnedWords[position].description,
                                 style: TextStyle(
                                     color: Colors.grey.shade700,
                                     wordSpacing: 2,
@@ -138,10 +104,34 @@ class _WordsListState extends State {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
                           GestureDetector(
-                              onTap: () {
-                                goToDetail(this.words[position]);
-                              },
-                              child: Icon(Icons.edit, size: 30)),
+                            onTap: () {
+                              setState(() {
+                                if (this.learnedWords[position].isLearn == 1) {
+                                  this.learnedWords[position].isLearn = 0;
+                                  updateWord(this.learnedWords[position]);
+
+                                  ToastMessage(
+                                      "It was removed from\nwhat was learned.");
+                                } else if (this
+                                        .learnedWords[position]
+                                        .isLearn ==
+                                    0) {
+                                  this.learnedWords[position].isLearn = 1;
+                                  updateWord(this.learnedWords[position]);
+
+                                  ToastMessage(
+                                      "Added to what has\nbeen learned.");
+                                }
+                              });
+                            },
+                            child: Icon(
+                              Icons.bookmark,
+                              size: 40,
+                              color: this.learnedWords[position].isLearn == 1
+                                  ? Colors.deepOrange
+                                  : Colors.grey,
+                            ),
+                          ),
                           SizedBox(width: 70),
                           Container(
                             height: 30.0,
@@ -155,12 +145,14 @@ class _WordsListState extends State {
                               onTap: () {
                                 setState(() {
                                   ToastMessage(
-                                      "${this.words[position].word} is deleted");
-                                  deleteWord(this.words[position]);
+                                      "${this.learnedWords[position].word} is deleted");
+                                  deleteWord(this.learnedWords[position]);
+                                  deleteLearnedWord(
+                                      this.learnedWords[position]);
                                   getWords();
                                 });
                               },
-                              child: Icon(Icons.delete, size: 30))
+                              child: Icon(Icons.delete, size: 40))
                         ],
                       ),
                       SizedBox(height: 10)
@@ -173,12 +165,76 @@ class _WordsListState extends State {
         });
   } //sayfa sonu
 
+  void getWords() async {
+    var wordsFuture = dbHelper.getWords();
+    wordsFuture.then((data) {
+      setState(() {
+        this.words = data;
+        for (Word word in words) {
+          if (word.isLearn == 1) {
+            this.learnedWords.add(word);
+          }
+        }
+        wordCount = learnedWords.length;
+      });
+    });
+  }
+
+  void goToDetail(Word word) async {
+    bool result = await Navigator.push(
+        context, MaterialPageRoute(builder: (context) => WordDetail(word)));
+    if (result != null) {
+      if (result) {
+        getWords();
+      }
+    }
+  }
+
+  void deleteWord(Word word) async {
+    await dbHelper.delete(word.id);
+  }
+
+  void deleteLearnedWord(Word word) async {
+    learnedWords.remove(word);
+    wordCount = learnedWords.length;
+  }
+
+  void allDelete(List<Word> words) {
+    for (int i = 0; i < words.length; i++) {
+      learnedWords.remove(words[i]);
+    }
+  }
+
+  void updateWord(Word word) async {
+    await dbHelper.update(Word.withId(
+        id: word.id,
+        word: word.word,
+        description: word.description,
+        isLearn: word.isLearn));
+  }
+
+  void showDetail(BuildContext ctx, Word word) {
+    showDialog(
+      context: ctx,
+      barrierDismissible: true,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(word.word,
+              style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
+          content: Text(word.description,
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          actions: <Widget>[],
+        );
+      },
+    );
+  }
+
   Widget buildAppBar() {
     return AppBar(
       backgroundColor: Colors.deepOrange,
       centerTitle: false,
       title: Text(
-        "Words",
+        "Learned Words",
         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
       ),
       actions: <Widget>[
@@ -214,70 +270,6 @@ class _WordsListState extends State {
           ),
         ),
       ],
-    );
-  }
-
-  void goToWordAdd() async {
-    bool result = await Navigator.push(
-        context, MaterialPageRoute(builder: (context) => WordAdd()));
-    if (result != null) {
-      if (result) {
-        getWords();
-      }
-    }
-  }
-
-  void getWords() async {
-    var wordsFuture = dbHelper.getWords();
-    wordsFuture.then((data) {
-      setState(() {
-        this.words = data;
-        wordCount = data.length;
-      });
-    });
-  }
-
-  void goToDetail(Word word) async {
-    bool result = await Navigator.push(
-        context, MaterialPageRoute(builder: (context) => WordDetail(word)));
-    if (result != null) {
-      if (result) {
-        getWords();
-      }
-    }
-  }
-
-  void deleteWord(Word word) async {
-    await dbHelper.delete(word.id);
-  }
-
-  void allDelete(List<Word> words) async {
-    for (int i = 0; i < words.length; i++) {
-      await dbHelper.delete(words[i].id);
-    }
-  }
-
-  void updateWord(Word word) async {
-    await dbHelper.update(Word.withId(
-        id: word.id,
-        word: word.word,
-        description: word.description,
-        isLearn: word.isLearn));
-  }
-
-  void showDetail(BuildContext ctx, Word word) {
-    showDialog(
-      context: ctx,
-      barrierDismissible: true,
-      builder: (ctx) {
-        return AlertDialog(
-          title: Text(word.word,
-              style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
-          content: Text(word.description,
-              style: TextStyle(fontWeight: FontWeight.bold)),
-          actions: <Widget>[],
-        );
-      },
     );
   }
 }
