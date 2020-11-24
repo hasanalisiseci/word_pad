@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:word_pad/models/word.dart';
